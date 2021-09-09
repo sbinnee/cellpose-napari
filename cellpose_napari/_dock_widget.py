@@ -9,7 +9,7 @@ import cv2
 from PyQt5.QtWidgets import QWidget, QTextEdit, QVBoxLayout, QLabel, QTextBrowser
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import napari 
+import napari
 import napari.utils.notifications
 from napari import Viewer
 from napari.layers import Image, Shapes
@@ -28,8 +28,8 @@ class TextWindow(QWidget):
         self.logTextBox = QtWidgets.QPlainTextEdit(self)
         self.logTextBox.setReadOnly(True)
         self.cursor = self.logTextBox.textCursor()
-        self.cursor.movePosition(self.cursor.End)    
-        
+        self.cursor.movePosition(self.cursor.End)
+
         layout = QtWidgets.QVBoxLayout()
         # Add the new logging box widget to the layout
         layout.addWidget(self.label)
@@ -50,7 +50,7 @@ def read_logging(log_file, logwindow):
                 logwindow.cursor.movePosition(logwindow.cursor.End)
                 logwindow.cursor.insertText(line)
                 yield line
-            
+
 main_channel_choices = [('average all channels', 0), ('0=red', 1), ('1=green', 2), ('2=blue', 3),
                         ('3', 4), ('4', 5), ('5', 6), ('6', 7), ('7', 8), ('8', 9)]
 optional_nuclear_channel_choices = [('none', 0), ('0=red', 1), ('1=green', 2), ('2=blue', 3),
@@ -69,10 +69,10 @@ def widget_wrapper():
     from cellpose.transforms import resize_image
 
     from cellpose import logger
-    
+
     @thread_worker
     def run_cellpose(image, model_type, custom_model, channels, channel_axis, diameter,
-                    net_avg, resample, cellprob_threshold, 
+                    net_avg, resample, cellprob_threshold,
                     model_match_threshold, do_3D, stitch_threshold):
         flow_threshold = (31.0 - model_match_threshold) / 10.
         if model_match_threshold==0.0:
@@ -83,8 +83,8 @@ def widget_wrapper():
             CP = models.CellposeModel(pretrained_model=custom_model, gpu=True)
         else:
             CP = models.CellposeModel(model_type=model_type, gpu=True)
-        masks, flows_orig, _ = CP.eval(image, 
-                                    channels=channels, 
+        masks, flows_orig, _ = CP.eval(image,
+                                    channels=channels,
                                     channel_axis=channel_axis,
                                     diameter=diameter,
                                     net_avg=net_avg,
@@ -93,9 +93,9 @@ def widget_wrapper():
                                     flow_threshold=flow_threshold,
                                     do_3D=do_3D,
                                     stitch_threshold=stitch_threshold)
-        del CP 
+        del CP
         if not do_3D and stitch_threshold==0 and masks.ndim > 2:
-            flows = [[flows_orig[0][i], 
+            flows = [[flows_orig[0][i],
                       flows_orig[1][:,i],
                       flows_orig[2][i],
                       flows_orig[3][:,i]] for i in range(masks.shape[0])]
@@ -112,7 +112,7 @@ def widget_wrapper():
         del CP
         return diam
 
-    @thread_worker 
+    @thread_worker
     def compute_masks(masks_orig, flows_orig, cellprob_threshold, model_match_threshold):
         #print(flows_orig[3].shape, flows_orig[2].shape, masks_orig.shape)
         flow_threshold = (31.0 - model_match_threshold) / 10.
@@ -125,9 +125,9 @@ def widget_wrapper():
         maski = fill_holes_and_remove_small_masks(maski)
         maski = resize_image(maski, masks_orig.shape[-2], masks_orig.shape[-1],
                                         interpolation=cv2.INTER_NEAREST)
-        return maski 
+        return maski
 
-    @magicgui(call_button='run segmentation',  
+    @magicgui(call_button='run segmentation',
             layout='vertical',
             model_type = dict(widget_type='ComboBox', label='model type', choices=['cyto', 'nuclei', 'cyto2', 'custom'], value='cyto', tooltip='there is a <em>cyto</em> model, a new <em>cyto2</em> model from user submissions, and a <em>nuclei</em> model'),
             custom_model = dict(widget_type='FileEdit', label='custom model path: ', tooltip='if model type is custom, specify file path to it here'),
@@ -148,7 +148,7 @@ def widget_wrapper():
             output_outlines = dict(widget_type='CheckBox', text='output outlines', value=True),
             )
 
-    def widget(#label_logo, 
+    def widget(#label_logo,
             viewer: napari.viewer.Viewer,
                 image_layer: Image,
                 model_type,
@@ -171,7 +171,7 @@ def widget_wrapper():
                 output_outlines):
         if not hasattr(widget, 'cellpose_layers'):
             widget.cellpose_layers = []
-        
+
         if clear_previous_segmentations:
             layer_names = [layer.name for layer in viewer.layers]
             for layer_name in layer_names:
@@ -186,17 +186,17 @@ def widget_wrapper():
             cellprob = resize_image(flows_orig[2], masks.shape[-2], masks.shape[-1],
                                     no_channels=True)
             cellprob = cellprob.squeeze()
-            outlines = masks_to_outlines(masks) * masks  
+            outlines = masks_to_outlines(masks) * masks
             if masks.ndim==3 and widget.n_channels > 0:
-                masks = np.repeat(np.expand_dims(masks, axis=widget.channel_axis), 
+                masks = np.repeat(np.expand_dims(masks, axis=widget.channel_axis),
                                 widget.n_channels, axis=widget.channel_axis)
-                outlines = np.repeat(np.expand_dims(outlines, axis=widget.channel_axis), 
+                outlines = np.repeat(np.expand_dims(outlines, axis=widget.channel_axis),
                                     widget.n_channels, axis=widget.channel_axis)
-                flows = np.repeat(np.expand_dims(flows, axis=widget.channel_axis), 
+                flows = np.repeat(np.expand_dims(flows, axis=widget.channel_axis),
                                 widget.n_channels, axis=widget.channel_axis)
-                cellprob = np.repeat(np.expand_dims(cellprob, axis=widget.channel_axis), 
+                cellprob = np.repeat(np.expand_dims(cellprob, axis=widget.channel_axis),
                                     widget.n_channels, axis=widget.channel_axis)
-                
+
             widget.flows_orig = flows_orig
             widget.masks_orig = masks
             widget.iseg = '_' + '%03d'%len(widget.cellpose_layers)
@@ -217,18 +217,18 @@ def widget_wrapper():
                         _new_layers(mask, flow_orig)
                 else:
                     _new_layers(masks, flows_orig)
-                
+
                 for layer in viewer.layers:
                     layer.visible = False
                 viewer.layers[-1].visible = True
                 image_layer.visible = True
                 if not float(stitch_threshold_3D):
-                    widget.compute_masks_button.enabled = True            
+                    widget.compute_masks_button.enabled = True
             except Exception as e:
                 print(e)
             widget.call_button.enabled = True
-            
-        image = image_layer.data 
+
+        image = image_layer.data
         # put channels last
         widget.n_channels = 0
         widget.channel_axis = None
@@ -247,9 +247,9 @@ def widget_wrapper():
         cp_worker = run_cellpose(image=image,
                                 model_type=model_type,
                                 custom_model=str(custom_model.resolve()),
-                                channels=[max(0, main_channel), 
+                                channels=[max(0, main_channel),
                                             max(0, optional_nuclear_channel)],
-                                channel_axis=widget.channel_axis, 
+                                channel_axis=widget.channel_axis,
                                 diameter=float(diameter),
                                 net_avg=net_average,
                                 resample=resample_dynamics,
@@ -259,18 +259,18 @@ def widget_wrapper():
                                 stitch_threshold=float(stitch_threshold_3D) if image_layer.ndim>2 else 0.0)
         cp_worker.returned.connect(_new_segmentation)
         cp_worker.start()
-        
-        
+
+
         pass
 
     def update_masks(masks):
         outlines = masks_to_outlines(masks) * masks
         if masks.ndim==3 and widget.n_channels > 0:
-            masks = np.repeat(np.expand_dims(masks, axis=widget.channel_axis), 
+            masks = np.repeat(np.expand_dims(masks, axis=widget.channel_axis),
                             widget.n_channels, axis=widget.channel_axis)
-            outlines = np.repeat(np.expand_dims(outlines, axis=widget.channel_axis), 
+            outlines = np.repeat(np.expand_dims(outlines, axis=widget.channel_axis),
                                 widget.n_channels, axis=widget.channel_axis)
-        
+
         widget.viewer.value.layers[widget.image_layer.value.name + '_cp_masks' + widget.iseg].data = masks
         outline_str = widget.image_layer.value.name + '_cp_outlines' + widget.iseg
         if outline_str in widget.viewer.value.layers:
@@ -279,11 +279,11 @@ def widget_wrapper():
         logger.info('masks updated')
 
 
-    @widget.compute_masks_button.changed.connect 
+    @widget.compute_masks_button.changed.connect
     def _compute_masks(event):
-        mask_worker = compute_masks(widget.masks_orig, 
-                                    widget.flows_orig, 
-                                    widget.cellprob_threshold.value, 
+        mask_worker = compute_masks(widget.masks_orig,
+                                    widget.flows_orig,
+                                    widget.cellprob_threshold.value,
                                     widget.model_match_threshold.value)
         mask_worker.returned.connect(update_masks)
         mask_worker.start()
@@ -291,8 +291,8 @@ def widget_wrapper():
     def _report_diameter(diam):
         widget.diameter.value = diam
         logger.info(f'computed diameter = {diam}')
-    
-    @widget.compute_diameter_button.changed.connect 
+
+    @widget.compute_diameter_button.changed.connect
     def _compute_diameter(event):
         print('button clicked')
         if widget.model_type.value == 'custom':
@@ -306,7 +306,7 @@ def widget_wrapper():
             diam_worker.start()
         ### TODO 3D images
 
-    @widget.compute_diameter_shape.changed.connect 
+    @widget.compute_diameter_shape.changed.connect
     def _compute_diameter_shape(event):
         diam = 0
         k=0
@@ -321,11 +321,9 @@ def widget_wrapper():
         else:
             logging.error('no square or circle shapes created')
 
-    return widget            
+    return widget
 
 
 @napari_hook_implementation
 def napari_experimental_provide_dock_widget():
     return widget_wrapper, {'name': 'cellpose'}
-
-
