@@ -4,6 +4,7 @@ cellpose dock widget module
 from napari_plugin_engine import napari_hook_implementation
 
 import sys, pathlib, os, time
+import functools
 import numpy as np
 import cv2
 from PyQt5.QtWidgets import QWidget, QTextEdit, QVBoxLayout, QLabel, QTextBrowser
@@ -70,7 +71,27 @@ def widget_wrapper():
 
     from cellpose import logger
 
+    def timer(func):
+        """Print the runtime of the decorated function
+
+        References
+        ----------
+        .. [1] https://realpython.com/primer-on-python-decorators/#timing-functions
+        """
+        @functools.wraps(func)
+        def wrapper_timer(*args, **kwargs):
+            logger.info(f"Start {func.__name__!r}")
+            start_time = time.perf_counter()    # 1
+            value = func(*args, **kwargs)
+            end_time = time.perf_counter()      # 2
+            run_time = end_time - start_time    # 3
+            logger.info(f"Finished {func.__name__!r} in {run_time:.4f} secs")
+            return value
+        return wrapper_timer
+
+
     @thread_worker
+    @timer
     def run_cellpose(image, model_type, custom_model, channels, channel_axis, diameter,
                     net_avg, resample, cellprob_threshold,
                     model_match_threshold, do_3D, stitch_threshold):
@@ -105,6 +126,7 @@ def widget_wrapper():
         return segmentation
 
     @thread_worker
+    @timer
     def compute_diameter(image, channels, model_type):
         CP = models.Cellpose(model_type = model_type, gpu=True)
         diam = CP.sz.eval(image, channels=channels, channel_axis=-1)[0]
@@ -113,6 +135,7 @@ def widget_wrapper():
         return diam
 
     @thread_worker
+    @timer
     def compute_masks(masks_orig, flows_orig, cellprob_threshold, model_match_threshold):
         #print(flows_orig[3].shape, flows_orig[2].shape, masks_orig.shape)
         flow_threshold = (31.0 - model_match_threshold) / 10.
