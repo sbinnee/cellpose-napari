@@ -7,8 +7,8 @@ import sys, pathlib, os, time
 import functools
 import numpy as np
 import cv2
-from PyQt5.QtWidgets import QWidget, QTextEdit, QVBoxLayout, QLabel, QTextBrowser
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy.QtWidgets import QWidget, QTextEdit, QVBoxLayout, QLabel, QTextBrowser
+from qtpy import QtCore, QtGui, QtWidgets
 
 import napari
 import napari.utils.notifications
